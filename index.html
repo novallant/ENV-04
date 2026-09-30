@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Class</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="loginPage" class="page">
+    <div class="login-card">
+      <div class="logo">⚡</div>
+      <h1>SMART CLASS</h1>
+      <p class="subtitle">Monitoring & Kehadiran Kelas</p>
+
+      <form id="loginForm">
+        <label for="username">Username</label>
+        <input id="username" type="text" placeholder="Masukkan username" required>
+
+        <label for="password">Password</label>
+        <input id="password" type="password" placeholder="Masukkan password" required>
+
+        <button class="primary-btn" type="submit">LOGIN</button>
+        <p id="loginMessage" class="message"></p>
+      </form>
+    </div>
+  </div>
+
+  <div id="dashboardPage" class="page hidden">
+    <header class="topbar">
+      <div>
+        <div class="brand">⚡ SMART CLASS</div>
+        <div class="brand-subtitle">Electrical Monitoring System</div>
+      </div>
+      <div class="header-right">
+        <div id="clock" class="clock">--:--:--</div>
+        <button id="logoutBtn" class="logout-btn">Logout</button>
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="welcome">
+        <div>
+          <span class="muted">Selamat datang,</span>
+          <h2 id="displayName">User</h2>
+        </div>
+        <div id="connectionStatus" class="status-badge offline">● OFFLINE</div>
+      </section>
+
+      <section class="section">
+        <div class="section-title">
+          <h3>Jadwal Sekarang</h3>
+          <span id="currentDay">-</span>
+        </div>
+
+        <div id="classCard" class="class-card">
+          <div class="class-info">
+            <span class="class-label">KELAS AKTIF</span>
+            <h2 id="className">Mencari jadwal...</h2>
+            <p id="classTime">--:-- - --:--</p>
+            <p id="classRoom">Ruang: -</p>
+          </div>
+          <div id="classStatus" class="class-status">MEMUAT</div>
+        </div>
+      </section>
+
+      <section class="attendance-section">
+        <div class="attendance-card">
+          <div class="attendance-icon">💡</div>
+          <div>
+            <h3>Kehadiran</h3>
+            <p id="attendanceText">Belum melakukan presensi.</p>
+          </div>
+          <button id="arriveBtn" class="arrive-btn" disabled>DATANG</button>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-title">
+          <h3>Monitoring Listrik</h3>
+          <span class="live-indicator"><span></span> LIVE</span>
+        </div>
+
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <div class="metric-icon voltage">V</div>
+            <div class="metric-label">TEGANGAN</div>
+            <div class="metric-value"><span id="voltage">0.00</span><small> V</small></div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-icon current">A</div>
+            <div class="metric-label">ARUS</div>
+            <div class="metric-value"><span id="current">0.00</span><small> A</small></div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-icon power">W</div>
+            <div class="metric-label">DAYA</div>
+            <div class="metric-value"><span id="power">0.00</span><small> W</small></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="info-grid">
+          <div class="info-card">
+            <span>STATUS LAMPU</span>
+            <strong id="relayStatus">OFF</strong>
+          </div>
+          <div class="info-card">
+            <span>PEMBACAAN TERAKHIR</span>
+            <strong id="lastUpdate">-</strong>
+          </div>
+        </div>
+      </section>
+
+      <section id="adminSection" class="section hidden">
+        <div class="section-title"><h3>Kontrol Manual</h3></div>
+        <div class="manual-control">
+          <button id="relayOnBtn" class="control-on">LAMPU ON</button>
+          <button id="relayOffBtn" class="control-off">LAMPU OFF</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
