@@ -1,0 +1,1629 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SISTEM OTOMASI KELAS PERKULIAHAN</title>
+
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#101827;color:white;min-height:100vh}
+.hidden{display:none!important}
+.login-container{max-width:380px;margin:100px auto;padding:30px;background:#1e293b;border-radius:14px}
+h1,h2{text-align:center}
+input,select,button{width:100%;padding:12px;margin-top:12px;border:none;border-radius:8px;font-size:15px}
+input,select{background:#334155;color:white}
+button{background:#2563eb;color:white;cursor:pointer;font-weight:bold}
+button:hover{opacity:.85}
+button:disabled{opacity:.5;cursor:not-allowed}
+.error{color:#f87171;font-size:14px}
+.dashboard{max-width:1100px;margin:auto;padding:24px}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.topbar button{width:auto;margin:0}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-top:28px}
+.card{background:#1e293b;border-radius:12px;padding:22px;text-align:center}
+.value{font-size:30px;font-weight:bold;margin-top:14px}
+.relay-card{margin-top:20px}
+#relayButton{max-width:240px}
+.status{color:#94a3b8;font-size:14px;line-height:1.6}
+.schedule-section,.simulation-section{margin-top:25px;text-align:left}
+.schedule-section h2,.simulation-section h2{text-align:left;margin-bottom:5px}
+.schedule-form{background:#0f172a;padding:18px;border-radius:10px;margin-top:15px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-grid .full{grid-column:1/-1}
+.schedule-actions{display:flex;gap:10px;flex-wrap:wrap}
+.schedule-actions button{flex:1;min-width:120px}
+.cancel-btn{background:#475569}
+.simulation-display{text-align:center;font-size:34px;font-weight:bold;margin:20px 0;padding:18px;background:#0f172a;border-radius:10px;letter-spacing:1px}
+.simulation-running{color:#22c55e;font-weight:bold}
+.simulation-paused{color:#f59e0b;font-weight:bold}
+.table-container{margin-top:20px;overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:700px}
+th,td{padding:12px;border-bottom:1px solid #334155;text-align:center}
+th{background:#0f172a}
+tr:hover{background:#263449}
+.edit-btn{background:#d97706;width:auto;margin:0 4px;padding:8px 12px}
+.delete-btn{background:#dc2626;width:auto;margin:0 4px;padding:8px 12px}
+.empty-message{color:#94a3b8;text-align:center;padding:20px}
+.admin-badge{display:inline-block;background:#2563eb;padding:5px 10px;border-radius:20px;font-size:12px;margin-top:5px}
+.confirm-yes{background:#16a34a}
+.confirm-no{background:#dc2626}
+.late-relay-button{background:#b45309;max-width:380px}
+.countdown{ text-align:center;font-size:40px;font-weight:bold;margin:20px 0;padding:15px;background:#0f172a;border-radius:10px}
+@media(max-width:600px){
+  .dashboard{padding:15px}
+  .form-grid{grid-template-columns:1fr}
+  .form-grid .full{grid-column:auto}
+  .simulation-display{font-size:25px}
+  .countdown{font-size:34px}
+}
+</style>
+</head>
+
+<body>
+
+<!-- LOGIN -->
+<div id="loginPage" class="login-container">
+  <h2>SISTEM OTOMASI PERALATAN LISTRIK PADA KELAS</h2>
+  <p style="text-align:center;color:#94a3b8">Silakan login untuk melanjutkan</p>
+  <input type="email" id="email" placeholder="Email" autocomplete="username">
+  <input type="password" id="password" placeholder="Password" autocomplete="current-password">
+  <button id="loginButton">Login</button>
+  <p id="loginMessage" class="error"></p>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard" class="dashboard hidden">
+
+  <div class="topbar">
+    <div>
+      <h2 style="text-align:left;margin-bottom:5px">Energy Monitoring</h2>
+      <div id="userEmail" class="status"></div>
+      <div id="adminBadge" class="admin-badge hidden">ADMIN</div>
+    </div>
+    <button id="logoutButton">Logout</button>
+  </div>
+
+  <!-- SENSOR -->
+  <div class="cards">
+    <div class="card">
+      <div>Tegangan</div>
+      <div class="value"><span id="voltage">--</span></div>
+      <div class="status">Volt (V)</div>
+    </div>
+    <div class="card">
+      <div>Arus</div>
+      <div class="value"><span id="current">--</span></div>
+      <div class="status">Ampere (A)</div>
+    </div>
+    <div class="card">
+      <div>Daya</div>
+      <div class="value"><span id="power">--</span></div>
+      <div class="status">Watt (W)</div>
+    </div>
+  </div>
+
+  <!-- RELAY -->
+  <div class="card relay-card">
+    <h3>Kontrol Relay</h3>
+    <div class="status">Status relay ESP32</div>
+    <div class="value" id="relayStatus">--</div>
+    <button id="relayButton" disabled>Memuat status...</button>
+    <p id="relayMessage" class="status"></p>
+  </div>
+
+  <!-- KONFIRMASI KELAS -->
+  <div id="classConfirmationSection" class="card hidden"
+       style="margin-top:20px;text-align:left">
+    <h2 style="text-align:left">Konfirmasi Kelas</h2>
+
+    <div id="confirmationSubject"
+         style="font-size:20px;font-weight:bold;margin-top:10px">-</div>
+
+    <div id="confirmationSchedule" class="status" style="margin-top:6px">-</div>
+
+    <div id="confirmationStatus" class="status" style="margin-top:15px">
+      Menunggu konfirmasi kelas...
+    </div>
+
+    <div id="confirmationCountdown" class="countdown">15:00</div>
+
+    <p id="confirmationWarning" class="status">
+      Pilih KELAS ADA atau KELAS TIDAK ADA sebelum 15 menit habis.
+    </p>
+
+    <div id="confirmationChoiceButtons">
+      <button id="confirmClassButton" class="confirm-yes">KELAS ADA</button>
+      <button id="rejectClassButton" class="confirm-no">KELAS TIDAK ADA</button>
+    </div>
+
+    <!-- Tombol ini hanya muncul setelah timeout tanpa konfirmasi -->
+    <button id="lateRelayOnButton" class="late-relay-button hidden">
+      NYALAKAN RELAY (TERLAMBAT)
+    </button>
+
+    <p id="confirmationMessage" class="status"></p>
+  </div>
+
+  <!-- ENERGY AND COAL SAVING -->
+  <div id="savingSection" class="card" style="margin-top:20px;text-align:left">
+    <h2 style="text-align:left">Energy &amp; Coal Saving</h2>
+
+    <div class="status">
+      Perhitungan penghematan energi dan batubara berdasarkan durasi relay OFF saat simulasi berjalan.
+    </div>
+
+    <div class="schedule-form">
+      <div class="form-grid">
+        <div>
+          <label>Daya Beban</label>
+          <div class="value" style="margin-top:5px">
+            <span id="savingPower">0.00</span> W
+          </div>
+          <div class="status">Diambil otomatis dari sensor ESP32</div>
+        </div>
+
+        <div>
+          <label>Coal Factor</label>
+          <div class="value" style="margin-top:5px">0.50</div>
+          <div class="status">kg coal / kWh</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <div>Daya Beban</div>
+        <div class="value"><span id="savingPowerDisplay">0.00</span></div>
+        <div class="status">Watt (W)</div>
+      </div>
+
+      <div class="card">
+        <div>Durasi Beban OFF</div>
+        <div class="value"><span id="savingDuration">0.00</span></div>
+        <div class="status">Jam</div>
+      </div>
+
+      <div class="card">
+        <div>Energi Dihemat</div>
+        <div class="value"><span id="savingEnergy">0.000</span></div>
+        <div class="status">kWh</div>
+      </div>
+
+      <div class="card">
+        <div>Coal Factor</div>
+        <div class="value"><span id="coalFactorDisplay">0.50</span></div>
+        <div class="status">kg/kWh</div>
+      </div>
+
+      <div class="card">
+        <div>Coal Dihemat</div>
+        <div class="value"><span id="coalSaved">0.000</span></div>
+        <div class="status">kg coal</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SIMULATION -->
+  <div id="simulationSection" class="card simulation-section hidden">
+    <h2>Simulation Clock</h2>
+    <div class="status">Atur tanggal, waktu, dan kecepatan simulasi.</div>
+
+    <div class="schedule-form">
+      <div class="form-grid">
+        <div>
+          <label>Tanggal Simulasi</label>
+          <input type="date" id="simulationDate">
+        </div>
+
+        <div>
+          <label>Waktu Simulasi</label>
+          <input type="time" id="simulationTime" step="1">
+        </div>
+
+        <div class="full">
+          <label>Kecepatan Simulasi</label>
+          <select id="simulationSpeed">
+            <option value="1">1× — Normal</option>
+            <option value="2">2×</option>
+            <option value="5">5×</option>
+            <option value="10">10×</option>
+            <option value="15">15×</option>
+            <option value="30">30×</option>
+            <option value="60">60× — 1 menit/detik</option>
+            <option value="120">120× — 2 menit/detik</option>
+            <option value="300">300× — 5 menit/detik</option>
+            <option value="600">600× — 10 menit/detik</option>
+            <option value="900">900× — 15 menit/detik</option>
+            <option value="1800">1800× — 30 menit/detik</option>
+            <option value="3600">3600× — 1 jam/detik</option>
+            <option value="7200">7200× — 2 jam/detik</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="simulationDisplay" class="simulation-display">---- -- -- 00:00:00</div>
+
+      <div id="simulationStatus" class="status" style="text-align:center">
+        Simulasi berhenti
+      </div>
+
+      <div class="schedule-actions">
+        <button id="startSimulationButton">▶ MULAI / LANJUTKAN</button>
+        <button id="pauseSimulationButton" class="cancel-btn">⏸ PAUSE</button>
+        <button id="resetSimulationButton" class="cancel-btn">↻ RESET</button>
+      </div>
+
+      <p id="simulationMessage" class="status"></p>
+    </div>
+  </div>
+
+  <!-- ADMIN SCHEDULE -->
+  <div id="adminScheduleSection" class="card schedule-section hidden">
+    <h2>Jadwal Perkuliahan</h2>
+    <div class="status">Pengaturan jadwal hanya dapat dilakukan oleh administrator.</div>
+
+    <div class="schedule-form">
+      <h3 id="formTitle">Tambah Jadwal</h3>
+
+      <div class="form-grid">
+        <div>
+          <label>Hari</label>
+          <select id="scheduleDay">
+            <option value="1">Senin</option>
+            <option value="2">Selasa</option>
+            <option value="3">Rabu</option>
+            <option value="4">Kamis</option>
+            <option value="5">Jumat</option>
+            <option value="6">Sabtu</option>
+            <option value="7">Minggu</option>
+          </select>
+        </div>
+
+        <div>
+          <label>Mata Kuliah</label>
+          <input type="text" id="scheduleSubject" placeholder="Contoh: Teknik Kendali">
+        </div>
+
+        <div>
+          <label>Waktu Mulai</label>
+          <input type="time" id="scheduleStart">
+        </div>
+
+        <div>
+          <label>Waktu Selesai</label>
+          <input type="time" id="scheduleEnd">
+        </div>
+      </div>
+
+      <div class="schedule-actions">
+        <button id="saveScheduleButton">Tambah Jadwal</button>
+        <button id="cancelEditButton" class="cancel-btn hidden">Batal Edit</button>
+      </div>
+
+      <p id="scheduleMessage" class="status"></p>
+    </div>
+
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Hari</th><th>Mata Kuliah</th><th>Mulai</th>
+            <th>Selesai</th><th>Relay</th><th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="scheduleTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script type="module">
+import { initializeApp } from
+  "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+
+import {
+  getAuth,
+  signInWithEmailAndPassword,
+  onAuthStateChanged,
+  signOut
+} from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+
+import {
+  getDatabase,
+  ref,
+  onValue,
+  set,
+  push,
+  update,
+  remove
+} from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
+
+// ==================================================
+// FIREBASE
+// ==================================================
+const firebaseConfig = {
+  apiKey: "AIzaSyCn58yfOI_7VDXRhgVuDaFC0yjKxeTfhVs",
+  authDomain: "env-04-database.firebaseapp.com",
+  databaseURL: "https://env-04-database-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "env-04-database",
+  storageBucket: "env-04-database.firebasestorage.app",
+  messagingSenderId: "87959465330",
+  appId: "1:87959465330:web:34b336239a59e34a67c1eb",
+  measurementId: "G-VH3EC13812"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
+
+const ADMIN_EMAIL = "bangunnoval@student.ub.ac.id";
+const COAL_FACTOR = 0.50;
+const CONFIRMATION_LIMIT_SECONDS = 15 * 60;
+
+const $ = id => document.getElementById(id);
+
+// ==================================================
+// ELEMENT
+// ==================================================
+const loginPage = $("loginPage");
+const dashboard = $("dashboard");
+const loginMessage = $("loginMessage");
+const relayMessage = $("relayMessage");
+const relayButton = $("relayButton");
+
+const adminScheduleSection = $("adminScheduleSection");
+const simulationSection = $("simulationSection");
+const adminBadge = $("adminBadge");
+const scheduleTableBody = $("scheduleTableBody");
+const scheduleMessage = $("scheduleMessage");
+
+const classConfirmationSection = $("classConfirmationSection");
+const confirmationSubject = $("confirmationSubject");
+const confirmationSchedule = $("confirmationSchedule");
+const confirmationStatus = $("confirmationStatus");
+const confirmationCountdown = $("confirmationCountdown");
+const confirmationWarning = $("confirmationWarning");
+const confirmClassButton = $("confirmClassButton");
+const rejectClassButton = $("rejectClassButton");
+const confirmationChoiceButtons = $("confirmationChoiceButtons");
+const lateRelayOnButton = $("lateRelayOnButton");
+const confirmationMessage = $("confirmationMessage");
+
+// ==================================================
+// STATE
+// ==================================================
+let currentUser = null;
+let isAdmin = false;
+let currentRelay = null;
+
+let unsubscribeSensor = null;
+let unsubscribeSchedules = null;
+let unsubscribeConfirmation = null;
+let simulationListener = null;
+
+let editingScheduleId = null;
+let latestSchedules = {};
+let currentScheduleId = null;
+let currentScheduleData = null;
+let confirmationData = null;
+
+let savingDataLoaded = false;
+let savingDataListener = null;
+let savingWriteInProgress = false;
+let savingWriteQueued = false;
+let savingWritePromise = Promise.resolve();
+
+let simulationInterval = null;
+let simulationWriteInProgress = false;
+
+let lastTimeoutCommandKey = "";
+let lateCommandInProgress = false;
+let lastSavingSimulationTime = null;
+
+let savingAccumulatedHours = 0;
+let savingBaselinePower = 0;
+
+let simulationData = {
+  enabled: true,
+  date: "",
+  time: "00:00:00",
+  speed: 1,
+  running: false,
+  sessionId: ""
+};
+
+// ==================================================
+// HELPER
+// ==================================================
+function createSessionId() {
+  if (window.crypto && typeof window.crypto.randomUUID === "function") {
+    return window.crypto.randomUUID();
+  }
+
+  return Date.now().toString(36) + "-" +
+    Math.random().toString(36).slice(2, 12);
+}
+
+function timeToSeconds(time) {
+  if (!time) return 0;
+
+  const parts = String(time).split(":").map(Number);
+
+  return (parts[0] || 0) * 3600 +
+         (parts[1] || 0) * 60 +
+         (parts[2] || 0);
+}
+
+function secondsToTime(value) {
+  value = Math.floor(value) % 86400;
+  if (value < 0) value += 86400;
+
+  const h = Math.floor(value / 3600);
+  const m = Math.floor((value % 3600) / 60);
+  const s = value % 60;
+
+  return String(h).padStart(2, "0") + ":" +
+         String(m).padStart(2, "0") + ":" +
+         String(s).padStart(2, "0");
+}
+
+function getSimulationDay(dateString) {
+  if (!dateString) return 0;
+
+  const day = new Date(dateString + "T00:00:00").getDay();
+  return day === 0 ? 7 : day;
+}
+
+function escapeHTML(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function getCurrentSchedule() {
+  if (!simulationData.date || !simulationData.time) return null;
+
+  const day = getSimulationDay(simulationData.date);
+  const now = timeToSeconds(simulationData.time);
+
+  for (const [id, schedule] of Object.entries(latestSchedules)) {
+    if (Number(schedule.day) !== day) continue;
+
+    const start = timeToSeconds(schedule.start);
+    const end = timeToSeconds(schedule.end);
+
+    if (end > start && now >= start && now < end) {
+      return { id, data: schedule };
+    }
+  }
+
+  return null;
+}
+
+function getCurrentConfirmation() {
+  const current = getCurrentSchedule();
+
+  if (!current || !confirmationData) return null;
+  if (confirmationData.date !== simulationData.date) return null;
+  if (confirmationData.scheduleId !== current.id) return null;
+
+  // Mencegah konfirmasi dari sesi lama digunakan kembali.
+  if (
+    simulationData.sessionId &&
+    confirmationData.sessionId !== simulationData.sessionId
+  ) {
+    return null;
+  }
+
+  return confirmationData;
+}
+
+function makeScheduleKey(current) {
+  if (!current) return "";
+
+  return [
+    simulationData.sessionId || "legacy",
+    simulationData.date,
+    current.id
+  ].join("|");
+}
+
+// ==================================================
+// LOGIN
+// ==================================================
+$("loginButton").addEventListener("click", async () => {
+  const email = $("email").value.trim();
+  const password = $("password").value;
+
+  loginMessage.textContent = "";
+
+  if (!email || !password) {
+    loginMessage.textContent = "Email dan password harus diisi.";
+    return;
+  }
+
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+  } catch (error) {
+    console.error(error);
+    loginMessage.textContent =
+      "Login gagal. Periksa email dan password.";
+  }
+});
+
+$("password").addEventListener("keydown", event => {
+  if (event.key === "Enter") $("loginButton").click();
+});
+
+$("logoutButton").addEventListener("click", async () => {
+  await signOut(auth);
+});
+
+// ==================================================
+// AUTH STATE
+// ==================================================
+onAuthStateChanged(auth, user => {
+  cleanupListeners();
+
+  currentUser = user;
+  isAdmin = Boolean(
+    user &&
+    (user.email || "").toLowerCase() === ADMIN_EMAIL.toLowerCase()
+  );
+
+  currentRelay = null;
+  latestSchedules = {};
+  currentScheduleId = null;
+  currentScheduleData = null;
+  confirmationData = null;
+
+  relayButton.disabled = true;
+  relayButton.textContent = "Memuat status...";
+
+  classConfirmationSection.classList.add("hidden");
+
+ // Jangan reset total penghematan saat login/logout.
+lastSavingSimulationTime = null;
+
+updateCoalSaving();
+
+  if (!user) {
+    dashboard.classList.add("hidden");
+    loginPage.classList.remove("hidden");
+    adminScheduleSection.classList.add("hidden");
+    simulationSection.classList.add("hidden");
+    adminBadge.classList.add("hidden");
+    return;
+  }
+
+  loadSavingData();
+
+  loginPage.classList.add("hidden");
+  dashboard.classList.remove("hidden");
+  $("userEmail").textContent = user.email || "";
+
+  adminScheduleSection.classList.toggle("hidden", !isAdmin);
+  simulationSection.classList.toggle("hidden", !isAdmin);
+  adminBadge.classList.toggle("hidden", !isAdmin);
+
+  // Sensor
+  unsubscribeSensor = onValue(ref(db, "sensor"), snapshot => {
+    const data = snapshot.val();
+
+    if (!data) {
+      relayMessage.textContent = "Data sensor belum tersedia.";
+      return;
+    }
+
+    $("voltage").textContent =
+      Number(data.tegangan ?? data.voltage ?? 0).toFixed(2);
+
+    $("current").textContent =
+      Number(data.arus ?? data.current ?? 0).toFixed(2);
+
+    const actualPower = Number(data.daya ?? data.power ?? 0);
+    $("power").textContent = actualPower.toFixed(2);
+
+    if (data.relay !== undefined && data.relay !== null) {
+      currentRelay =
+        data.relay === true ||
+        data.relay === 1 ||
+        String(data.relay).toUpperCase() === "ON";
+
+      updateRelayUI();
+    }
+
+    if (currentRelay === true && actualPower > 0) {
+      savingBaselinePower = actualPower;
+      updateCoalSaving();
+    }
+  }, error => {
+    relayMessage.textContent = "Gagal membaca data: " + error.message;
+  });
+
+  // Jadwal, simulasi, dan konfirmasi dibaca untuk pengguna yang login.
+  // Aturan database tetap menentukan siapa yang boleh menulis.
+  loadSchedules();
+  loadClassConfirmation();
+
+  if (isAdmin) {
+    loadSimulation();
+  }
+});
+
+function cleanupListeners() {
+  if (unsubscribeSensor) {
+    unsubscribeSensor();
+    unsubscribeSensor = null;
+  }
+
+  if (unsubscribeSchedules) {
+    unsubscribeSchedules();
+    unsubscribeSchedules = null;
+  }
+
+  if (unsubscribeConfirmation) {
+    unsubscribeConfirmation();
+    unsubscribeConfirmation = null;
+  }
+
+  if (simulationListener) {
+    simulationListener();
+    simulationListener = null;
+  }
+
+  stopSimulationClock();
+}
+
+// ==================================================
+// RELAY UI
+// ==================================================
+function updateRelayUI() {
+  const status = $("relayStatus");
+    // NON-ADMIN: sembunyikan kontrol relay di luar jadwal
+  const activeSchedule =
+    simulationData.running && getCurrentSchedule();
+
+  if (!isAdmin && !activeSchedule) {
+    relayButton.classList.add("hidden");
+    relayButton.disabled = true;
+
+    status.textContent =
+      currentRelay === null
+        ? "--"
+        : currentRelay
+          ? "ON"
+          : "OFF";
+
+    return;
+  }
+
+  if (currentRelay === null) {
+    relayButton.disabled = true;
+    relayButton.classList.remove("hidden");
+    relayButton.textContent = "Status belum tersedia";
+    status.textContent = "--";
+    return;
+  }
+
+  status.textContent = currentRelay ? "ON" : "OFF";
+
+  // Selama jadwal aktif, kontrol toggle biasa disembunyikan.
+  // Tombol relay terlambat hanya berada di kartu konfirmasi.
+  if (simulationData.running && getCurrentSchedule()) {
+    relayButton.classList.add("hidden");
+    relayButton.disabled = true;
+    return;
+  }
+
+  relayButton.classList.remove("hidden");
+  relayButton.disabled = false;
+  relayButton.textContent = currentRelay ? "Matikan Relay" : "Nyalakan Relay";
+}
+
+relayButton.addEventListener("click", async () => {
+const activeSchedule =
+  simulationData.running && Boolean(getCurrentSchedule());
+
+// Non-admin tidak boleh mengakses relay di luar jadwal
+if (!isAdmin && !activeSchedule) {
+  relayButton.classList.add("hidden");
+  relayButton.disabled = true;
+
+  relayMessage.textContent =
+    "Akses relay di luar jadwal hanya tersedia untuk admin.";
+
+  return;
+}
+
+if (currentRelay === null) return;
+
+// Saat jadwal aktif, relay tetap mengikuti logika jadwal
+if (activeSchedule) {
+  relayMessage.textContent =
+    "Jadwal aktif. Kontrol relay mengikuti jadwal.";
+
+  return;
+}
+  relayButton.disabled = true;
+  relayMessage.textContent = "Mengirim perintah...";
+
+  try {
+    const command = currentRelay ? "OFF" : "ON";
+    await set(ref(db, "relayCommand"), command);
+
+    relayMessage.textContent =
+      "Perintah " + command + " terkirim. Menunggu respons ESP32...";
+  } catch (error) {
+    console.error(error);
+    relayMessage.textContent =
+      "Gagal mengirim perintah: " + error.message;
+  } finally {
+    updateRelayUI();
+  }
+});
+
+// ==================================================
+// CLASS CONFIRMATION
+// ==================================================
+function loadClassConfirmation() {
+  if (unsubscribeConfirmation) unsubscribeConfirmation();
+
+  unsubscribeConfirmation = onValue(
+    ref(db, "classConfirmation"),
+    snapshot => {
+      confirmationData = snapshot.val();
+      updateClassConfirmation();
+    },
+    error => console.error("Gagal membaca konfirmasi:", error)
+  );
+}
+
+function updateClassConfirmation() {
+  if (!simulationData.running) {
+    classConfirmationSection.classList.add("hidden");
+    currentScheduleId = null;
+    currentScheduleData = null;
+    updateRelayUI();
+    return;
+  }
+
+  const current = getCurrentSchedule();
+
+  if (!current) {
+    classConfirmationSection.classList.add("hidden");
+    currentScheduleId = null;
+    currentScheduleData = null;
+    updateRelayUI();
+    return;
+  }
+
+  currentScheduleId = current.id;
+  currentScheduleData = current.data;
+
+  const elapsed =
+    timeToSeconds(simulationData.time) -
+    timeToSeconds(current.data.start);
+
+  if (elapsed < 0) {
+    classConfirmationSection.classList.add("hidden");
+    updateRelayUI();
+    return;
+  }
+
+  classConfirmationSection.classList.remove("hidden");
+
+  confirmationSubject.textContent =
+    current.data.subject || "-";
+
+  confirmationSchedule.textContent =
+    current.data.start + " - " + current.data.end;
+
+  const decision = getCurrentConfirmation();
+  const decisionMade =
+    decision !== null &&
+    typeof decision.confirmed === "boolean";
+
+  // ----------------------------------------------
+  // SUDAH DIKONFIRMASI: countdown dan pilihan hilang.
+  // ----------------------------------------------
+  if (decisionMade) {
+    confirmationCountdown.classList.add("hidden");
+    confirmationChoiceButtons.classList.add("hidden");
+    lateRelayOnButton.classList.add("hidden");
+
+    confirmClassButton.disabled = true;
+    rejectClassButton.disabled = true;
+
+    if (decision.confirmed === true) {
+      confirmationStatus.textContent = "✓ KELAS DIKONFIRMASI ADA";
+      confirmationWarning.textContent =
+        "Relay tetap ON sampai jadwal selesai.";
+      confirmationMessage.textContent =
+        "Konfirmasi berhasil disimpan.";
+    } else {
+      confirmationStatus.textContent = "✕ KELAS DIKONFIRMASI TIDAK ADA";
+      confirmationWarning.textContent =
+        "Relay OFF sampai jadwal selesai.";
+      confirmationMessage.textContent =
+        "Konfirmasi berhasil disimpan.";
+    }
+
+    updateRelayUI();
+    return;
+  }
+
+  // ----------------------------------------------
+  // BELUM DIKONFIRMASI: countdown masih berjalan.
+  // ----------------------------------------------
+  if (elapsed < CONFIRMATION_LIMIT_SECONDS) {
+    const remaining = CONFIRMATION_LIMIT_SECONDS - elapsed;
+    const minutes = Math.floor(remaining / 60);
+    const seconds = remaining % 60;
+
+    confirmationCountdown.classList.remove("hidden");
+    confirmationCountdown.textContent =
+      String(minutes).padStart(2, "0") + ":" +
+      String(seconds).padStart(2, "0");
+
+    confirmationChoiceButtons.classList.remove("hidden");
+    lateRelayOnButton.classList.add("hidden");
+
+    confirmClassButton.disabled = false;
+    rejectClassButton.disabled = false;
+
+    confirmationStatus.textContent = "MENUNGGU KONFIRMASI KELAS";
+    confirmationWarning.textContent =
+      "Pilih KELAS ADA atau KELAS TIDAK ADA sebelum 15 menit simulasi habis.";
+    confirmationMessage.textContent = "";
+
+    updateRelayUI();
+    return;
+  }
+
+  // ----------------------------------------------
+  // TIMEOUT: relay OFF, tombol terlambat baru muncul.
+  // ----------------------------------------------
+  confirmationCountdown.classList.remove("hidden");
+  confirmationCountdown.textContent = "00:00";
+
+  confirmationChoiceButtons.classList.add("hidden");
+  confirmClassButton.disabled = true;
+  rejectClassButton.disabled = true;
+
+  lateRelayOnButton.classList.remove("hidden");
+  lateRelayOnButton.disabled = false;
+  lateRelayOnButton.textContent = "NYALAKAN RELAY (TERLAMBAT)";
+
+  confirmationStatus.textContent = "WAKTU KONFIRMASI HABIS";
+  confirmationWarning.textContent =
+    "Tidak ada keputusan dalam 15 menit. Relay otomatis OFF.";
+  confirmationMessage.textContent =
+    "Jika kelas ternyata berlangsung, tekan tombol untuk menyalakan relay.";
+
+  sendTimeoutOffOnce(current);
+  updateRelayUI();
+}
+
+async function sendTimeoutOffOnce(current) {
+  const key = makeScheduleKey(current);
+
+  if (!key || lastTimeoutCommandKey === key) return;
+
+  // Tandai dahulu supaya event Firebase tidak mengirim OFF berkali-kali.
+  lastTimeoutCommandKey = key;
+
+  try {
+    await set(ref(db, "relayCommand"), "OFF");
+    confirmationMessage.textContent =
+      "Batas konfirmasi habis. Perintah OFF telah dikirim.";
+  } catch (error) {
+    console.error(error);
+    lastTimeoutCommandKey = "";
+    confirmationMessage.textContent =
+      "Pengiriman OFF gagal: " + error.message;
+  }
+}
+
+async function submitClassDecision(isClassPresent) {
+  if (!simulationData.running || !currentScheduleId || !currentScheduleData) {
+    confirmationMessage.textContent = "Tidak ada jadwal aktif.";
+    return;
+  }
+
+  const elapsed =
+    timeToSeconds(simulationData.time) -
+    timeToSeconds(currentScheduleData.start);
+
+  if (elapsed < 0 || elapsed >= CONFIRMATION_LIMIT_SECONDS) {
+    confirmationMessage.textContent =
+      "Waktu konfirmasi 15 menit sudah habis.";
+    updateClassConfirmation();
+    return;
+  }
+
+  if (getCurrentConfirmation()) {
+    confirmationMessage.textContent =
+      "Keputusan kelas sudah tersimpan dan tidak dapat diubah.";
+    updateClassConfirmation();
+    return;
+  }
+
+  confirmClassButton.disabled = true;
+  rejectClassButton.disabled = true;
+  confirmationMessage.textContent = "Menyimpan keputusan...";
+
+  const data = {
+    date: simulationData.date,
+    scheduleId: currentScheduleId,
+    sessionId: simulationData.sessionId || "",
+    confirmed: isClassPresent,
+    subject: currentScheduleData.subject || "",
+    start: currentScheduleData.start,
+    end: currentScheduleData.end,
+    timestamp: Date.now()
+  };
+
+  try {
+    await set(ref(db, "classConfirmation"), data);
+    confirmationData = data;
+
+    confirmationMessage.textContent = isClassPresent
+      ? "Kelas dikonfirmasi ADA."
+      : "Kelas dikonfirmasi TIDAK ADA.";
+
+    updateClassConfirmation();
+  } catch (error) {
+    console.error(error);
+
+    confirmationMessage.textContent =
+      "Gagal menyimpan keputusan: " + error.message;
+
+    confirmClassButton.disabled = false;
+    rejectClassButton.disabled = false;
+  }
+}
+
+confirmClassButton.addEventListener(
+  "click",
+  () => submitClassDecision(true)
+);
+
+rejectClassButton.addEventListener(
+  "click",
+  () => submitClassDecision(false)
+);
+
+// Tombol terlambat hanya muncul ketika countdown sudah habis.
+lateRelayOnButton.addEventListener("click", async () => {
+  const current = getCurrentSchedule();
+
+  if (!simulationData.running || !current) {
+    confirmationMessage.textContent = "Tidak ada jadwal aktif.";
+    return;
+  }
+
+  const elapsed =
+    timeToSeconds(simulationData.time) -
+    timeToSeconds(current.data.start);
+
+  if (elapsed < CONFIRMATION_LIMIT_SECONDS) {
+    confirmationMessage.textContent =
+      "Batas waktu konfirmasi belum habis.";
+    updateClassConfirmation();
+    return;
+  }
+
+  // Jika keputusan ADA/TIDAK ADA sudah dibuat,
+  // tombol terlambat tidak boleh mengubahnya.
+  if (getCurrentConfirmation()) {
+    confirmationMessage.textContent =
+      "Keputusan kelas sudah tercatat.";
+    updateClassConfirmation();
+    return;
+  }
+
+  if (lateCommandInProgress) return;
+
+  lateCommandInProgress = true;
+  lateRelayOnButton.disabled = true;
+  confirmationMessage.textContent =
+    "Mengirim perintah relay ON terlambat...";
+
+  try {
+    await set(ref(db, "relayCommand"), "FORCE_ON");
+
+    confirmationMessage.textContent =
+      "FORCE_ON terkirim. Menunggu ESP32 menyalakan relay.";
+
+    lateRelayOnButton.textContent = "PERINTAH ON TERKIRIM";
+  } catch (error) {
+    console.error(error);
+
+    confirmationMessage.textContent =
+      "Gagal mengirim perintah: " + error.message;
+
+    lateRelayOnButton.disabled = false;
+  } finally {
+    lateCommandInProgress = false;
+  }
+});
+
+// ==================================================
+// ENERGY AND COAL SAVING
+// ==================================================
+function updateCoalSaving() {
+  const power = savingBaselinePower || 0;
+  const energy = power * savingAccumulatedHours / 1000;
+
+  $("savingPower").textContent = power.toFixed(2);
+  $("savingPowerDisplay").textContent = power.toFixed(2);
+  $("savingDuration").textContent = savingAccumulatedHours.toFixed(2);
+  $("savingEnergy").textContent = energy.toFixed(3);
+  $("coalFactorDisplay").textContent = COAL_FACTOR.toFixed(2);
+  $("coalSaved").textContent = (energy * COAL_FACTOR).toFixed(3);
+}
+// =====================================================
+// SIMPAN ENERGY SAVING KE FIREBASE
+// =====================================================
+
+function loadSavingData() {
+  if (savingDataListener) {
+    savingDataListener();
+    savingDataListener = null;
+  }
+
+  savingDataLoaded = false;
+
+  savingDataListener = onValue(
+    ref(db, "energySaving"),
+    (snapshot) => {
+      const data = snapshot.val() || {};
+
+      savingAccumulatedHours = Math.max(
+        0,
+        Number(data.accumulatedHours ?? 0)
+      );
+
+      savingBaselinePower = Math.max(
+        0,
+        Number(data.baselinePower ?? 0)
+      );
+
+      savingDataLoaded = true;
+
+      // Lepaskan listener setelah pembacaan awal.
+      // Data tidak akan dimuat ulang terus-menerus.
+      if (savingDataListener) {
+        savingDataListener();
+        savingDataListener = null;
+      }
+
+      updateCoalSaving();
+    },
+    (error) => {
+      console.error(
+        "Gagal membaca data penghematan:",
+        error
+      );
+    }
+  );
+}
+
+
+async function saveSavingData() {
+  if (!savingDataLoaded) return;
+
+  const user = auth.currentUser;
+
+  if (
+    !user ||
+    (user.email || "").toLowerCase() !==
+      ADMIN_EMAIL.toLowerCase()
+  ) {
+    return;
+  }
+
+  const payload = {
+    accumulatedHours: Math.max(
+      0,
+      Number(savingAccumulatedHours) || 0
+    ),
+
+    baselinePower: Math.max(
+      0,
+      Number(savingBaselinePower) || 0
+    ),
+
+    updatedAt: Date.now()
+  };
+
+  try {
+    await set(
+      ref(db, "energySaving"),
+      payload
+    );
+  } catch (error) {
+    console.error(
+      "Gagal menyimpan data penghematan:",
+      error
+    );
+  }
+}
+
+// ==================================================
+// SIMULATION
+// ==================================================
+function loadSimulation() {
+  if (simulationListener) simulationListener();
+
+  simulationListener = onValue(
+    ref(db, "simulation"),
+    snapshot => {
+      const data = snapshot.val();
+
+      if (data) {
+        simulationData = {
+          enabled: data.enabled ?? true,
+          date: data.date ?? "",
+          time: data.time ?? "00:00:00",
+          speed: Number(data.speed ?? 1),
+          running: data.running ?? false,
+          sessionId: data.sessionId ?? ""
+        };
+      }
+
+      // Jangan timpa field yang sedang diedit pengguna.
+      if (document.activeElement !== $("simulationDate")) {
+        $("simulationDate").value = simulationData.date;
+      }
+
+      if (document.activeElement !== $("simulationTime")) {
+        $("simulationTime").value =
+          simulationData.time.length === 5
+            ? simulationData.time
+            : simulationData.time.substring(0, 8);
+      }
+
+      if (document.activeElement !== $("simulationSpeed")) {
+        $("simulationSpeed").value = String(simulationData.speed);
+      }
+
+      updateSimulationDisplay();
+
+      if (simulationData.running) {
+        startSimulationClock();
+      } else {
+        stopSimulationClock();
+      }
+    },
+    error => {
+      $("simulationMessage").textContent =
+        "Gagal membaca simulasi: " + error.message;
+    }
+  );
+}
+
+async function saveSimulation() {
+  const date = $("simulationDate").value;
+  const inputTime = $("simulationTime").value;
+  const speed = Number($("simulationSpeed").value);
+
+  if (!date || !inputTime) {
+    $("simulationMessage").textContent =
+      "Tanggal dan waktu simulasi harus diisi.";
+    return false;
+  }
+
+  const time = inputTime.length === 5
+    ? inputTime + ":00"
+    : inputTime;
+
+  const sessionChanged =
+    simulationData.date !== date ||
+    simulationData.time !== time;
+
+  simulationData.date = date;
+  simulationData.time = time;
+  simulationData.speed = speed;
+
+  // Jika tanggal/waktu diganti, buat sesi baru agar konfirmasi lama invalid.
+  if (!simulationData.sessionId || sessionChanged) {
+    simulationData.sessionId = createSessionId();
+    confirmationData = null;
+    lastTimeoutCommandKey = "";
+
+    try {
+      await Promise.all([
+        set(ref(db, "classConfirmation"), null),
+        set(ref(db, "relayCommand"), null)
+      ]);
+    } catch (error) {
+      $("simulationMessage").textContent =
+        "Gagal membersihkan data sesi lama: " + error.message;
+      return false;
+    }
+  }
+
+  try {
+    await set(ref(db, "simulation"), simulationData);
+    return true;
+  } catch (error) {
+    $("simulationMessage").textContent =
+      "Gagal menyimpan simulasi: " + error.message;
+    return false;
+  }
+}
+
+function startSimulationClock() {
+  if (simulationInterval) return;
+
+  simulationInterval = setInterval(async () => {
+    if (!simulationData.running || simulationWriteInProgress) return;
+
+    simulationWriteInProgress = true;
+
+    try {
+      const currentSeconds = timeToSeconds(simulationData.time);
+      let nextSeconds = currentSeconds +
+        Math.max(1, Number(simulationData.speed) || 1);
+
+      // Dukung kecepatan besar yang dapat melewati satu atau beberapa hari.
+      while (nextSeconds >= 86400) {
+        nextSeconds -= 86400;
+        advanceSimulationDate();
+      }
+
+      simulationData.time = secondsToTime(nextSeconds);
+
+      updateSimulationDisplay();
+
+      await set(ref(db, "simulation"), simulationData);
+    } catch (error) {
+      $("simulationMessage").textContent =
+        "Gagal memperbarui simulasi: " + error.message;
+    } finally {
+      simulationWriteInProgress = false;
+    }
+  }, 1000);
+}
+
+function advanceSimulationDate() {
+  if (!simulationData.date) return;
+
+  const date = new Date(simulationData.date + "T00:00:00");
+  date.setDate(date.getDate() + 1);
+
+  simulationData.date =
+    date.getFullYear() + "-" +
+    String(date.getMonth() + 1).padStart(2, "0") + "-" +
+    String(date.getDate()).padStart(2, "0");
+}
+
+function stopSimulationClock() {
+  if (!simulationInterval) return;
+
+  clearInterval(simulationInterval);
+  simulationInterval = null;
+}
+
+function updateSimulationDisplay() {
+  $("simulationDisplay").textContent =
+    (simulationData.date || "---- -- --") + " " +
+    (simulationData.time || "00:00:00");
+
+  const status = $("simulationStatus");
+
+  if (simulationData.running) {
+    status.textContent = "● SIMULASI BERJALAN";
+    status.className = "status simulation-running";
+  } else {
+    status.textContent = "● SIMULASI DIJEDA";
+    status.className = "status simulation-paused";
+  }
+
+  // Hitung durasi OFF dari selisih waktu simulasi.
+  if (simulationData.running && currentRelay === false) {
+    if (lastSavingSimulationTime === null) {
+      lastSavingSimulationTime = simulationData.time;
+    } else {
+      let diff =
+        timeToSeconds(simulationData.time) -
+        timeToSeconds(lastSavingSimulationTime);
+
+      if (diff < 0) diff += 86400;
+
+      savingAccumulatedHours += diff / 3600;
+      lastSavingSimulationTime = simulationData.time;
+      updateCoalSaving();
+    }
+  } else {
+    lastSavingSimulationTime = simulationData.time;
+  }
+
+  updateClassConfirmation();
+  updateRelayUI();
+}
+
+// Kecepatan baru disimpan tanpa menimpa tanggal/waktu yang sedang berjalan.
+$("simulationSpeed").addEventListener("change", async () => {
+  if (!isAdmin) return;
+
+  simulationData.speed = Number($("simulationSpeed").value) || 1;
+
+  try {
+    await update(ref(db, "simulation"), {
+      speed: simulationData.speed
+    });
+
+    $("simulationMessage").textContent =
+      "Kecepatan simulasi diubah menjadi " +
+      simulationData.speed + "×.";
+  } catch (error) {
+    $("simulationMessage").textContent =
+      "Gagal mengubah kecepatan: " + error.message;
+  }
+});
+
+$("startSimulationButton").addEventListener("click", async () => {
+  if (!isAdmin) return;
+
+  const saved = await saveSimulation();
+  if (!saved) return;
+
+  lastSavingSimulationTime = simulationData.time;
+  simulationData.running = true;
+
+  try {
+    await set(ref(db, "simulation"), simulationData);
+
+    startSimulationClock();
+    updateSimulationDisplay();
+
+    $("simulationMessage").textContent = "Simulasi berjalan.";
+  } catch (error) {
+    $("simulationMessage").textContent =
+      "Gagal memulai simulasi: " + error.message;
+  }
+});
+
+$("pauseSimulationButton").addEventListener("click", async () => {
+  if (!isAdmin) return;
+
+  simulationData.running = false;
+  stopSimulationClock();
+
+  lastSavingSimulationTime = simulationData.time;
+
+  try {
+    await set(ref(db, "simulation"), simulationData);
+    updateSimulationDisplay();
+
+    $("simulationMessage").textContent = "Simulasi dijeda.";
+  } catch (error) {
+    $("simulationMessage").textContent =
+      "Gagal menjeda simulasi: " + error.message;
+  }
+});
+
+$("resetSimulationButton").addEventListener("click", async () => {
+  if (!isAdmin) return;
+
+  simulationData.running = false;
+  simulationData.time = "00:00:00";
+  simulationData.sessionId = createSessionId();
+
+  savingAccumulatedHours = 0;
+  lastSavingSimulationTime = null;
+  lastTimeoutCommandKey = "";
+  lateCommandInProgress = false;
+
+  stopSimulationClock();
+  updateCoalSaving();
+
+  try {
+    await Promise.all([
+      set(ref(db, "simulation"), simulationData),
+      set(ref(db, "classConfirmation"), null),
+      set(ref(db, "relayCommand"), null)
+    ]);
+
+    confirmationData = null;
+    updateSimulationDisplay();
+
+    $("simulationMessage").textContent =
+      "Simulasi di-reset. Sesi baru dibuat.";
+  } catch (error) {
+    $("simulationMessage").textContent =
+      "Reset gagal: " + error.message;
+  }
+});
+
+// ==================================================
+// SCHEDULES
+// ==================================================
+function loadSchedules() {
+  if (unsubscribeSchedules) unsubscribeSchedules();
+
+  unsubscribeSchedules = onValue(
+    ref(db, "schedules"),
+    snapshot => {
+      latestSchedules = snapshot.val() || {};
+      updateClassConfirmation();
+
+      scheduleTableBody.innerHTML = "";
+
+      if (!snapshot.exists()) {
+        scheduleTableBody.innerHTML =
+          '<tr><td colspan="6" class="empty-message">Belum ada jadwal.</td></tr>';
+        return;
+      }
+
+      const entries = Object.entries(latestSchedules).sort((a, b) => {
+        const A = a[1], B = b[1];
+
+        if (Number(A.day) !== Number(B.day)) {
+          return Number(A.day) - Number(B.day);
+        }
+
+        return String(A.start).localeCompare(String(B.start));
+      });
+
+      entries.forEach(([id, schedule]) => {
+        const row = document.createElement("tr");
+
+        row.innerHTML = `
+          <td>${getDayName(schedule.day)}</td>
+          <td>${escapeHTML(schedule.subject || "-")}</td>
+          <td>${escapeHTML(schedule.start || "-")}</td>
+          <td>${escapeHTML(schedule.end || "-")}</td>
+          <td>${schedule.relay ? "ON" : "OFF"}</td>
+          <td>
+            <button class="edit-btn">Edit</button>
+            <button class="delete-btn">Hapus</button>
+          </td>
+        `;
+
+        row.querySelector(".edit-btn").addEventListener(
+          "click",
+          () => editSchedule(id, schedule)
+        );
+
+        row.querySelector(".delete-btn").addEventListener(
+          "click",
+          () => deleteSchedule(id)
+        );
+
+        scheduleTableBody.appendChild(row);
+      });
+    },
+    error => {
+      scheduleMessage.textContent =
+        "Gagal membaca jadwal: " + error.message;
+    }
+  );
+}
+
+function getDayName(day) {
+  return [
+    "", "Senin", "Selasa", "Rabu", "Kamis",
+    "Jumat", "Sabtu", "Minggu"
+  ][Number(day)] || "-";
+}
+
+$("saveScheduleButton").addEventListener("click", async () => {
+  if (!isAdmin) return;
+
+  const day = Number($("scheduleDay").value);
+  const subject = $("scheduleSubject").value.trim();
+  const start = $("scheduleStart").value;
+  const end = $("scheduleEnd").value;
+
+  if (!subject) {
+    scheduleMessage.textContent = "Mata kuliah harus diisi.";
+    return;
+  }
+
+  if (!start || !end) {
+    scheduleMessage.textContent =
+      "Waktu mulai dan selesai harus diisi.";
+    return;
+  }
+
+  if (start >= end) {
+    scheduleMessage.textContent =
+      "Waktu selesai harus lebih besar dari waktu mulai.";
+    return;
+  }
+
+  const scheduleData = {
+    day,
+    subject,
+    start,
+    end,
+    relay: true
+  };
+
+  try {
+    if (editingScheduleId) {
+      await update(
+        ref(db, "schedules/" + editingScheduleId),
+        scheduleData
+      );
+
+      scheduleMessage.textContent = "Jadwal berhasil diperbarui.";
+    } else {
+      const newRef = push(ref(db, "schedules"));
+      await set(newRef, scheduleData);
+
+      scheduleMessage.textContent = "Jadwal berhasil ditambahkan.";
+    }
+
+    resetScheduleForm();
+  } catch (error) {
+    console.error(error);
+
+    scheduleMessage.textContent =
+      "Gagal menyimpan jadwal: " + error.message;
+  }
+});
+
+function editSchedule(id, schedule) {
+  if (!isAdmin) return;
+
+  editingScheduleId = id;
+
+  $("scheduleDay").value = String(schedule.day);
+  $("scheduleSubject").value = schedule.subject || "";
+  $("scheduleStart").value = schedule.start || "";
+  $("scheduleEnd").value = schedule.end || "";
+
+  $("formTitle").textContent = "Edit Jadwal";
+  $("saveScheduleButton").textContent = "Simpan Perubahan";
+  $("cancelEditButton").classList.remove("hidden");
+
+  scheduleMessage.textContent = "Mode edit aktif.";
+}
+
+async function deleteSchedule(id) {
+  if (!isAdmin) return;
+  if (!confirm("Yakin ingin menghapus jadwal ini?")) return;
+
+  try {
+    await remove(ref(db, "schedules/" + id));
+    scheduleMessage.textContent = "Jadwal berhasil dihapus.";
+  } catch (error) {
+    console.error(error);
+
+    scheduleMessage.textContent =
+      "Gagal menghapus jadwal: " + error.message;
+  }
+}
+
+$("cancelEditButton").addEventListener("click", () => {
+  resetScheduleForm();
+  scheduleMessage.textContent = "Edit dibatalkan.";
+});
+
+function resetScheduleForm() {
+  editingScheduleId = null;
+
+  $("scheduleDay").value = "1";
+  $("scheduleSubject").value = "";
+  $("scheduleStart").value = "";
+  $("scheduleEnd").value = "";
+
+  $("formTitle").textContent = "Tambah Jadwal";
+  $("saveScheduleButton").textContent = "Tambah Jadwal";
+  $("cancelEditButton").classList.add("hidden");
+}
+</script>
+
+</body>
+</html>
